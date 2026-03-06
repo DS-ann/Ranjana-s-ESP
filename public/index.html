@@ -6,28 +6,41 @@
 <title>Ranjana's Smart Home</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.json">
 <style>
 body{margin:0;font-family:'Inter',sans-serif;background:linear-gradient(270deg,#ff9a9e,#fad0c4,#fbc2eb,#a6c1ee);background-size:800% 800%;animation:gradientBG 20s ease infinite;color:white}
 @keyframes gradientBG{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-.header{padding:20px;text-align:center}.wifi{font-size:14px;margin-top:5px}.container{padding:15px}.card{background:rgba(255,255,255,0.12);backdrop-filter:blur(15px);border-radius:18px;padding:15px;margin-bottom:15px}
-.device{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:8px;border-radius:12px;box-shadow:0 6px 12px rgba(0,0,0,0.2)}
-.device-right{display:flex;align-items:center;gap:8px}.switch{position:relative;width:40px;height:22px}
-.switch input{opacity:0;width:0;height:0}.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ff4d4d;transition:.4s;border-radius:25px}
-.slider:before{position:absolute;content:"";height:18px;width:18px;left:2px;bottom:2px;background:white;transition:.4s;border-radius:50%}
-input:checked+.slider{background:#00ff99}
-input:checked+.slider:before{transform:translateX(18px)}
-canvas#usageChart{max-height:200px}.popup{display:none;position:absolute;top:60px;background:rgba(0,0,0,0.85);border-radius:15px;padding:15px;box-shadow:0 10px 25px rgba(0,0,0,0.4);z-index:10;width:220px;text-align:center;color:white;backdrop-filter:blur(10px)}
-.popup input{width:50px;padding:5px;margin:5px;text-align:center;border-radius:5px;border:none;outline:none}
-.popup h4{margin:0 0 10px 0;font-weight:600}
-.usage-stat{margin:5px 0;font-size:0.9rem}.close-btn,.popup button{margin-top:10px;padding:5px 10px;border:none;border-radius:8px;cursor:pointer;font-weight:600}
-.close-btn{background:#e53935;color:#fff}.popup button.set-btn{background:#1a73e8;color:#fff;margin-right:5px}
+.header{padding:20px;text-align:center}
+.wifi{font-size:14px;margin-top:5px}
+.container{padding:15px}
+.card{background:rgba(255,255,255,0.12);backdrop-filter:blur(15px);border-radius:18px;padding:15px;margin-bottom:15px} 
+.device{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:8px;border-radius:12px;box-shadow:0 6px 12px rgba(0,0,0,0.2)} 
+.device-right{display:flex;align-items:center;gap:8px}
+.switch{position:relative;width:40px;height:22px} 
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ff4d4d;transition:.4s;border-radius:25px} 
+.slider:before{position:absolute;content:"";height:18px;width:18px;left:2px;bottom:2px;background:white;transition:.4s;border-radius:50%} 
+input:checked+.slider{background:#00ff99} 
+input:checked+.slider:before{transform:translateX(18px)} 
+canvas#usageChart{max-height:200px}
+.popup{display:none;position:absolute;top:60px;background:rgba(0,0,0,0.85);border-radius:15px;padding:15px;box-shadow:0 10px 25px rgba(0,0,0,0.4);z-index:10;width:220px;text-align:center;color:white;backdrop-filter:blur(10px)} 
+.popup input{width:50px;padding:5px;margin:5px;text-align:center;border-radius:5px;border:none;outline:none} 
+.popup h4{margin:0 0 10px 0;font-weight:600} 
+.usage-stat{margin:5px 0;font-size:0.9rem}
+.close-btn,.popup button{margin-top:10px;padding:5px 10px;border:none;border-radius:8px;cursor:pointer;font-weight:600} 
+.close-btn{background:#e53935;color:#fff}
+.popup button.set-btn{background:#1a73e8;color:#fff;margin-right:5px}
+.install-btn{position:fixed;bottom:20px;right:20px;background:#1a73e8;color:#fff;padding:10px 15px;border-radius:12px;border:none;cursor:pointer;display:none;z-index:1000;font-weight:600;}
 </style>
 </head>
 <body>
 
 <div class="header">
 <h2>Ranjana's Smart Home</h2>
-<div class="wifi">WiFi: <span id="wifiNum">--</span> | Signal: <span id="wifiSignal">--</span> dBm</div>
+<div class="wifi">
+  WiFi: <span id="wifiNum">--</span> | Signal: <span id="wifiSignal">--</span> dBm
+  <span id="offlineBadge" style="display:none;background:#e53935;color:#fff;padding:2px 6px;border-radius:8px;margin-left:10px;font-size:0.8rem;font-weight:600;">ESP Offline</span>
+</div>
 </div>
 
 <div class="container">
@@ -36,119 +49,178 @@ canvas#usageChart{max-height:200px}.popup{display:none;position:absolute;top:60p
 <div class="card"><h3>Usage Graph</h3><canvas id="usageChart"></canvas></div>
 </div>
 
-<script>
-const SERVER_URL="https://https://ranjana-s-esp.onrender.com/api"; // Update with your Render URL
+<button id="installBtn" class="install-btn">Install App</button>
 
+<script>
+// ===== Device configuration =====
 const devices=[
-{id:0,name:"Light",room:1},
-{id:1,name:"Fan",room:1},
-{id:2,name:"Tube",room:1},
-{id:3,name:"Socket",room:1},
-{id:4,name:"Light",room:2},
-{id:5,name:"Fan",room:2},
-{id:6,name:"Bulb",room:2},
-{id:7,name:"Socket",room:2}
+  {id:0,name:"Light",room:1}, {id:1,name:"Fan",room:1},
+  {id:2,name:"Tube",room:1}, {id:3,name:"Socket",room:1},
+  {id:4,name:"Light",room:2}, {id:5,name:"Fan",room:2},
+  {id:6,name:"Bulb",room:2}, {id:7,name:"Socket",room:2}
 ];
 
+// ===== UI setup =====
 function createDeviceHTML(d){
-return `<div class="device"><span>${d.name}</span><div class="device-right">
-<button onclick="openPopup('timer${d.id}')">⏱</button>
-<button onclick="openPopup('stats${d.id}')">📊</button>
-<label class="switch"><input type="checkbox" id="relay${d.id}" onchange="toggleRelay(${d.id})"><span class="slider"></span></label></div>
-<div class="popup" id="timer${d.id}"><h4>Set Timer</h4>
-<input type="number" id="hh${d.id}" placeholder="hh"> :
-<input type="number" id="mm${d.id}" placeholder="mm"> :
-<input type="number" id="ss${d.id}" placeholder="ss"><br>
-<button class="set-btn" onclick="setTimer(${d.id})">Set</button>
-<button class="close-btn" onclick="closePopup('timer${d.id}')">Close</button></div>
-<div class="popup" id="stats${d.id}"><h4>Usage Stats</h4>
-<div class="usage-stat" id="last${d.id}">Last ON: --</div>
-<div class="usage-stat" id="today${d.id}">Today: --</div>
-<div class="usage-stat" id="total${d.id}">Total: --</div>
-<button class="close-btn" onclick="closePopup('stats${d.id}')">Close</button></div>
-</div>`;
+  return `<div class="device">
+    <span>${d.name}</span>
+    <div class="device-right">
+      <button onclick="openPopup('timer${d.id}')">⏱</button>
+      <button onclick="openPopup('stats${d.id}')">📊</button>
+      <label class="switch"><input type="checkbox" id="relay${d.id}" onchange="sendRelay(${d.id})"><span class="slider"></span></label>
+    </div>
+    <div class="popup" id="timer${d.id}">
+      <h4>Set Timer</h4>
+      <input type="number" id="hh${d.id}" placeholder="hh"> :
+      <input type="number" id="mm${d.id}" placeholder="mm"> :
+      <input type="number" id="ss${d.id}" placeholder="ss"><br>
+      <button class="set-btn" onclick="setTimer(${d.id})">Set</button>
+      <button class="close-btn" onclick="closePopup('timer${d.id}')">Close</button>
+    </div>
+    <div class="popup" id="stats${d.id}">
+      <h4>Usage Stats</h4>
+      <div class="usage-stat" id="last${d.id}">Last ON: --</div>
+      <div class="usage-stat" id="today${d.id}">Today: --</div>
+      <div class="usage-stat" id="total${d.id}">Total: --</div>
+      <button class="close-btn" onclick="closePopup('stats${d.id}')">Close</button>
+    </div>
+  </div>`;
 }
 
 function loadDevices(){
-devices.forEach(d=>{
-(d.room===1?document.getElementById("room1"):document.getElementById("room2")).innerHTML+=createDeviceHTML(d);
-});
+  devices.forEach(d=>{
+    (d.room===1?document.getElementById("room1"):document.getElementById("room2")).innerHTML+=createDeviceHTML(d);
+  });
 }
 
-function toggleRelay(id){
-const state=document.getElementById("relay"+id).checked?1:0;
-fetch(`${SERVER_URL}/toggle`,{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({relay:id,state:state})
-});
+// ===== Timer and popup =====
+function toggleRelay(id,state){
+  document.getElementById("relay"+id).checked = state?true:false;
 }
 
-// Timer
+function sendRelay(id){
+  if(ws && ws.readyState===WebSocket.OPEN){
+    const state = document.getElementById("relay"+id).checked ? 1 : 0;
+    ws.send(JSON.stringify({type:"toggle",relay:id,state:state}));
+  }else{
+    console.log("Cannot toggle, ESP32 offline");
+    const input = document.getElementById("relay"+id);
+    input.checked = !input.checked;
+  }
+}
+
 function setTimer(id){
-const hh=parseInt(document.getElementById("hh"+id).value)||0;
-const mm=parseInt(document.getElementById("mm"+id).value)||0;
-const ss=parseInt(document.getElementById("ss"+id).value)||0;
-const seconds=hh*3600+mm*60+ss;
-fetch(`${SERVER_URL}/setTimer`,{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({id:id,sec:seconds})
-});
-closePopup("timer"+id);
+  const hh=parseInt(document.getElementById("hh"+id).value)||0;
+  const mm=parseInt(document.getElementById("mm"+id).value)||0;
+  const ss=parseInt(document.getElementById("ss"+id).value)||0;
+  const seconds=hh*3600+mm*60+ss;
+  ws.send(JSON.stringify({type:"setTimer",id:id,sec:seconds}));
+  closePopup("timer"+id);
 }
 
 function openPopup(id){document.querySelectorAll('.popup').forEach(p=>p.style.display='none');document.getElementById(id).style.display='block';}
 function closePopup(id){document.getElementById(id).style.display='none';}
 
-// Chart
+// ===== Chart =====
 let chart;
 function initChart(){
-const ctx=document.getElementById("usageChart").getContext("2d");
-chart=new Chart(ctx,{
-type:'bar',
-data:{
-labels:devices.map(d=>d.name),
-datasets:[
-{label:'Room 1',data:[0,0,0,0],backgroundColor:['#43cea2','#ff512f','#1c92d2','#f7971e']},
-{label:'Room 2',data:[0,0,0,0],backgroundColor:['#f7971e','#43cea2','#ff512f','#1c92d2']}
-]
-},
-options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,title:{display:true,text:'Usage (minutes)'}}}}
-});
+  const ctx=document.getElementById("usageChart").getContext("2d");
+  chart=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:devices.map(d=>d.name),
+      datasets:[
+        {label:'Room 1',data:[0,0,0,0],backgroundColor:['#43cea2','#ff512f','#1c92d2','#f7971e']},
+        {label:'Room 2',data:[0,0,0,0],backgroundColor:['#f7971e','#43cea2','#ff512f','#1c92d2']}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,title:{display:true,text:'Usage (minutes)'}}}}
+  });
 }
 
 function updateChart(usageData){
-chart.data.datasets[0].data=usageData.slice(0,4);
-chart.data.datasets[1].data=usageData.slice(4,8);
-chart.update();
+  chart.data.datasets[0].data=usageData.slice(0,4);
+  chart.data.datasets[1].data=usageData.slice(4,8);
+  chart.update();
 }
 
-function fetchStatus(){
-fetch(`${SERVER_URL}/status`).then(r=>r.json()).then(data=>{
-devices.forEach((d,i)=>{
-document.getElementById("relay"+i).checked=data.relays[i];
-document.getElementById("last"+i).innerText="Last ON: "+data.usageStats[i].last;
-document.getElementById("today"+i).innerText="Today: "+data.usageStats[i].today;
-document.getElementById("total"+i).innerText="Total: "+data.usageStats[i].total;
-});
-updateChart(data.usageStats.map(u=>Math.floor(u.today/60))); // minutes
-});
+// ===== WebSocket =====
+let ws;
+function setSwitchesEnabled(enabled){
+  devices.forEach(d=>{
+    document.getElementById("relay"+d.id).disabled = !enabled;
+  });
 }
 
-function fetchWiFi(){
-fetch(`${SERVER_URL}/status`).then(r=>r.json()).then(data=>{
-document.getElementById("wifiNum").innerText=data.wifiNum||"--";
-document.getElementById("wifiSignal").innerText=data.wifiRSSI||"--";
-});
+function connectWS(){
+  ws = new WebSocket("wss://ranjana-s-esp.onrender.com:3000/");
+  const offlineBadge = document.getElementById("offlineBadge");
+
+  ws.onopen = ()=>{
+    console.log("WS connected");
+    setSwitchesEnabled(true);
+    offlineBadge.style.display='none';
+  };
+
+  ws.onmessage = evt=>{
+    const data = JSON.parse(evt.data);
+    document.getElementById("wifiNum").innerText = data.wifiNum||"--";
+    document.getElementById("wifiSignal").innerText = data.rssi||"--";
+
+    devices.forEach((d,i)=>{
+      toggleRelay(d.id,data.relays[i]);
+      if(data.usageStats){
+        document.getElementById("last"+i).innerText = "Last ON: "+data.usageStats[i].last;
+        document.getElementById("today"+i).innerText = "Today: "+data.usageStats[i].today;
+        document.getElementById("total"+i).innerText = "Total: "+data.usageStats[i].total;
+      }
+    });
+
+    if(data.usageStats) updateChart(data.usageStats.map(u=>Math.floor(u.today/60)));
+  };
+
+  ws.onclose = ()=>{
+    console.log("WS disconnected");
+    setSwitchesEnabled(false);
+    offlineBadge.style.display='inline-block';
+    setTimeout(connectWS,3000);
+  };
 }
 
+// ===== PWA Install =====
+let deferredPrompt;
+const installBtn = document.getElementById("installBtn");
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.style.display='block';
+});
+
+installBtn.addEventListener('click', async ()=>{
+  installBtn.style.display='none';
+  deferredPrompt.prompt();
+  const choice = await deferredPrompt.userChoice;
+  console.log(choice.outcome);
+  deferredPrompt = null;
+});
+
+// ===== Service Worker =====
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js')
+      .then(function(registration) {
+        console.log('ServiceWorker registration successful:', registration.scope);
+      }, function(err) {
+        console.log('ServiceWorker registration failed:', err);
+      });
+  });
+}
+
+// ===== Init =====
 loadDevices();
 initChart();
-fetchStatus();
-fetchWiFi();
-setInterval(fetchStatus,1000);
-setInterval(fetchWiFi,5000);
+setSwitchesEnabled(false);
+connectWS();
 </script>
 </body>
 </html>
